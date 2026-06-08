@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Primax PRO COMPLETO</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:Arial;margin:20px}
+h1{color:#E30613}
+select{padding:6px;margin-bottom:10px}
+.card{border:1px solid #ccc;padding:15px;margin:10px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<h1>Dashboard Primax Comercial PRO</h1>
+<select id="district"></select>
+
+<div class="card"><canvas id="tend"></canvas></div>
+<div class="card"><canvas id="mix"></canvas></div>
+<div class="card"><canvas id="var"></canvas></div>
+
+<h3>KPIs</h3>
+<div id="kpis"></div>
+
+<h3>Alertas Inteligentes</h3>
+<ul id="alerts"></ul>
+
+<script>
+const data = {
+"LURIN":{d:[93289,92608,91689,88852],p:[35336,33870,27676,23186],r:[8276,8929,9257,6920],glp:[18004,19143,14713,14713]},
+"VES":{d:[64535,69975,77216,74090],p:[28913,25356,30436,24235],r:[10113,11598,14497,10889],glp:[40653,36695,32411,32411]},
+"SJL":{d:[27651,32513,33111,29666],p:[22776,22727,27231,21806],r:[12890,15704,20638,15284],glp:[32259,34226,26458,26458]}
+};
+
+const months=['Ene','Feb','Mar','Abr'];
+const sel=document.getElementById('district');
+let charts={};
+
+Object.keys(data).forEach(d=>{
+ let opt=document.createElement('option');
+ opt.value=d; opt.text=d;
+ sel.appendChild(opt);
+});
+
+function varp(a){return a.map((v,i)=>i==0?0:((v-a[i-1])/a[i-1]*100));}
+
+function render(d){
+ let x=data[d];
+ let total=x.d.map((v,i)=>v+x.p[i]+x.r[i]+x.glp[i]);
+
+ Object.values(charts).forEach(c=>c.destroy && c.destroy());
+
+ charts.t=new Chart(tend,{type:'line',data:{labels:months,datasets:[{label:'Total',data:total}]}});
+
+ charts.m=new Chart(mix,{type:'pie',data:{labels:['Diesel','Premium','Regular','GLP'],datasets:[{data:[x.d[3],x.p[3],x.r[3],x.glp[3]]}]}});
+
+ charts.v=new Chart(var,{type:'line',data:{labels:months,datasets:[{label:'Variación %',data:varp(total)}]}});
+
+ let growth=((total[3]-total[0])/total[0]*100).toFixed(1);
+ let dieselMix=(x.d[3]/total[3]*100).toFixed(1);
+ let glpMix=(x.glp[3]/total[3]*100).toFixed(1);
+
+ document.getElementById('kpis').innerHTML =
+  'Crecimiento: '+growth+'%<br>'+
+  'Mix Diesel: '+dieselMix+'%<br>'+
+  'Mix GLP: '+glpMix+'%';
+
+ let alerts=[];
+ if(varp(total)[3]<0) alerts.push('🔴 Caída en abril');
+ if(glpMix>20) alerts.push('🟢 Alto potencial GLP');
+ if(dieselMix>70) alerts.push('🟡 Alta dependencia Diesel');
+
+ document.getElementById('alerts').innerHTML = alerts.map(a=>'<li>'+a+'</li>').join('');
+}
+
+render('LURIN');
+sel.onchange=()=>render(sel.value);
+</script>
+
+</body>
+</html>
